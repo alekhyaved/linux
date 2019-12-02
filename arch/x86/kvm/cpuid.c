@@ -26,10 +26,18 @@
 
 u32 exit_count=0;
 u32 exit_number[69]={0};
-u64 net_exit_time = 0;
-EXPORT_SYMBOL(net_exit_time);
+u64 total_time_vmm = 0;
+EXPORT_SYMBOL(total_time_vmm);
 EXPORT_SYMBOL(exit_count);
 EXPORT_SYMBOL(exit_number);
+
+
+u32 sample;
+atomic64_t total_time_vmm = ATOMIC_INIT(0);
+atomic64_t each_time_vmm[69]={0};
+EXPORT_SYMBOL(each_time_vmm);
+EXPORT_SYMBOL(total_time_vmm);
+EXPORT_SYMBOL(sample);
 
 static u32 xstate_required_size(u64 xstate_bv, bool compacted)
 {
@@ -1253,10 +1261,31 @@ int kvm_emulate_cpuid(struct kvm_vcpu *vcpu)
         }
         break;
     }
-    printk("\r\n exit number %u\r\n",ecx)
+    printk("\r\n exit number %u\r\n",ecx);
     printk("\r\n exit count %u\r\n",(u32)exit_count);
     }
-
+	else if (eax == 0x4ffffffe)
+ 	{
+		ecx = (u64)atomic64_read(&total_time_vmm)& 0xffffffff;
+		ebx = ((u64)atomic64_read(&total_time_vmm) >> 32) & 0xffffffff;		
+		edx = 0;
+		eax = 0;		
+		
+	}
+	else if (eax==0x4ffffffc)
+    {
+    	sample= ecx;
+	if (sample <= 68 && sample != 35 && sample !=38 && sample!=42 && sample!=65)
+	{
+		ecx = (u64)atomic64_read(&each_time_vmm[sample])&0xffffffff;
+		ebx = ((u64)atomic64_read(&each_time_vmm[sample])>>32)& 0xffffffff;		
+		eax =0;
+		edx= 0;
+	
+	}
+	else {eax=0;ebx=0;ecx=0;edx=0xffffffff;}
+    	}
+	
     else {
 	kvm_cpuid(vcpu, &eax, &ebx, &ecx, &edx, true);
     }

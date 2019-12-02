@@ -109,8 +109,10 @@ module_param(nested, bool, S_IRUGO);
 static u64 __read_mostly host_xss;
 
 extern u32 exit_count;
-extern u64 net_exit_time;
+extern u64 total_time_vmm;
 extern u32 exit_number[69];
+extern atomic64_t total_time_vmm;
+extern atomic64_t each_time_vmm[69];
 
 bool __read_mostly enable_pml = 1;
 module_param_named(pml, enable_pml, bool, S_IRUGO);
@@ -5996,16 +5998,15 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 
     /* If guest state is invalid, start emulating */
     if (vmx->emulation_required){
-        net_exit_time +=(rdtsc() - s_cycle);
+       
         return handle_invalid_guest_state(vcpu);
     }
 
     if (is_guest_mode(vcpu) && nested_vmx_exit_reflected(vcpu, exit_reason)){
-        net_exit_time +=(rdtsc() - s_cycle);
+     
         return nested_vmx_reflect_vmexit(vcpu, exit_reason);
     }
     if (exit_reason & VMX_EXIT_REASONS_FAILED_VMENTRY) {
-        net_exit_time +=(rdtsc() - s_cycle);
         dump_vmcs();
         vcpu->run->exit_reason = KVM_EXIT_FAIL_ENTRY;
         vcpu->run->fail_entry.hardware_entry_failure_reason
@@ -6014,7 +6015,6 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
     }
 
     if (unlikely(vmx->fail)) {
-        net_exit_time +=(rdtsc() - s_cycle);
         dump_vmcs();
         vcpu->run->exit_reason = KVM_EXIT_FAIL_ENTRY;
         vcpu->run->fail_entry.hardware_entry_failure_reason
@@ -6069,7 +6069,19 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 
     if (exit_reason < kvm_vmx_max_exit_handlers
         && kvm_vmx_exit_handlers[exit_reason])
-        return kvm_vmx_exit_handlers[exit_reason](vcpu);
+
+	{
+		u64 handle_exit = 0;
+		u64 s_cycle;
+		u64 e_cycle;
+		s_cycle = rdtsc();
+		handle_exit = kvm_vmx_exit_handlers[exit_reason](vcpu);
+		e_cycle = rdtsc();
+		atomic64_add(e_cycle-s_cycle, &(each_time_vmm[exit_reason])); 			  			atomic64_add(e_cycle-s_cycle, &(total_time_vmm));
+		return handle_exit;
+
+		}
+
     else {
         vcpu_unimpl(vcpu, "vmx: unexpected exit reason 0x%x\n",
                 exit_reason);
