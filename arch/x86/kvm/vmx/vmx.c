@@ -109,7 +109,6 @@ module_param(nested, bool, S_IRUGO);
 static u64 __read_mostly host_xss;
 
 extern u32 exit_count;
-extern u64 total_time_vmm;
 extern u32 exit_number[69];
 extern atomic64_t total_time_vmm;
 extern atomic64_t each_time_vmm[69];

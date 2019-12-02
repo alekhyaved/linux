@@ -26,8 +26,6 @@
 
 u32 exit_count=0;
 u32 exit_number[69]={0};
-u64 total_time_vmm = 0;
-EXPORT_SYMBOL(total_time_vmm);
 EXPORT_SYMBOL(exit_count);
 EXPORT_SYMBOL(exit_number);
 
